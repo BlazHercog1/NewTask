@@ -39,7 +39,7 @@ jobs:
 
   poganjanje-testov:
     needs: preveri-teste
-    runs-on: self-hosted
+    runs-on: ubuntu latest
     if: needs.preveri-teste.outputs.testi_obstajajo == 'true'
     strategy:
       matrix:
