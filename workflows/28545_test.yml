@@ -48,7 +48,7 @@ jobs:
     steps:
       - name: Checkout kode
         uses: actions/checkout@v4
-        #Ponoven prenos kode za drugi posel
+        # Ponoven prenos kode za drugi posel
 
       - name: Prenesi artefakte
         uses: actions/download-artifact@v4
