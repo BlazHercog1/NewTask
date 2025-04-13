@@ -1,0 +1,61 @@
+name: Testiranje kode
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  preveri-teste:
+    runs-on: ubuntu-latest
+    outputs:
+      testi_obstajajo: ${ steps.preveri.outputs.obstajajo }
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Preveri če obstajajo testne skripte
+        run: |
+          if [ -d "./tests" ] && ls ./tests/test_*.py 1> /dev/null 2>&1; then
+            echo "obstajajo=true" >> $GITHUB_OUTPUT
+            echo "Testi so najdeni." 
+          else
+            echo "obstajajo=false" >> $GITHUB_OUTPUT
+            echo "Testne skripte manjkajo!" >&2
+            echo "NAPAKA: Testne skripte manjkajo!" > napaka.txt
+          fi
+
+      - name: Naloži artefakte
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-status
+          path: napaka.txt
+
+  poganjanje-testov:
+    needs: preveri-teste
+    runs-on: self-hosted
+    if: needs.preveri-teste.outputs.testi_obstajajo == 'true'
+    strategy:
+          matrix:
+            python-version: [3.8, 3.10]
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Prenesi artefakte
+        uses: actions/download-artifact@v4
+        with:
+          name: test-status
+
+      - name: Nastavi virtualno okolje in poženite teste (matrix)
+
+        run: |
+          if grep -q "NAPAKA" napaka.txt; then
+            echo "Napaka pri preverjanju testov!"
+            exit 1
+          fi
+
+          python${ matrix.python-version } -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+          pytest tests/
