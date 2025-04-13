@@ -1,58 +1,71 @@
-name: Run Tests
+name: Testiranje kode
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
-  check-tests:
-    runs-on: self-hosted
+  preveri-teste:
+    runs-on: ubuntu-latest
+    outputs:
+      testi_obstajajo: ${{ steps.preveri.outputs.obstajajo }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout kode
+        uses: actions/checkout@v4
+        # Prenos kode iz repozitorija za dostop do datotek
 
-      - name: Check for test_main.py
+      - name: Preveri če obstajajo testne skripte
+        id: preveri
         run: |
-          if [ ! -f test_main.py ]; then
-            echo "Test file not found!" > napaka.txt
+          touch napaka.txt
+          if [ -d "./tests" ] && ls ./tests/test_*.py 1> /dev/null 2>> napaka.txt; then
+            echo "obstajajo=true" >> $GITHUB_OUTPUT
+            echo "Testi so najdeni." >> napaka.txt
+          else
+            echo "obstajajo=false" >> $GITHUB_OUTPUT
+            echo "Testne skripte manjkajo!" >&2
+            echo "NAPAKA: Testne skripte manjkajo!" >> napaka.txt
             exit 1
           fi
+        # Preverjanje obstoja testnih datotek; standardna napaka se preusmeri v napaka.txt
 
-      - name: Upload napaka.txt
+      - name: Naloži artefakte
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: test-status
           path: napaka.txt
+        # Artefakt napaka.txt se naloži za komunikacijo z drugim poslom
 
-  run-tests:
-    needs: check-tests
+  poganjanje-testov:
+    needs: preveri-teste
     runs-on: self-hosted
+    if: needs.preveri-teste.outputs.testi_obstajajo == 'true'
+    strategy:
+      matrix:
+        python-version: [3.8, 3.10]
+        # Matrika za testiranje na različnih verzijah Pythona
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout kode
+        uses: actions/checkout@v4
+        #Ponoven prenos kode za drugi posel
 
-      - name: Download napaka.txt
-        uses: actions/download-artifact@v3
+      - name: Prenesi artefakte
+        uses: actions/download-artifact@v4
         with:
           name: test-status
+        # Prenos artefakta napaka.txt iz prvega posla
 
-      - name: Check for error file
+      - name: Nastavi virtualno okolje in poženite teste (matrix)
         run: |
-          if grep -q "not found" napaka.txt; then
-            echo "Tests failed to load."
+          if grep -q "NAPAKA" napaka.txt; then
+            echo "Napaka pri preverjanju testov!"
             exit 1
           fi
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.10
-
-      - name: Install dependencies
-        run: |
+          python${{ matrix.python-version }} -m venv venv
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install pytest
           pip install -r requirements.txt
-
-      - name: Run tests
-        run: |
-          python3 -m unittest test_main.py
+          pytest tests/ --verbose
+        # Namestitev pytest in odvisnosti, nato zagon testov z verbose izhodom
