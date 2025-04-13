@@ -6,7 +6,7 @@ def test_add():
 
 def test_pow():
     assert main.power(2,2)==4
-    assert main.power(200,1)==1
+    assert main.power(200,1)==200
 
 def test_divide():
     assert main.divide(10,2)==5
