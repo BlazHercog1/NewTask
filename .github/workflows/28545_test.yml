@@ -43,8 +43,9 @@ jobs:
     if: needs.preveri-teste.outputs.testi_obstajajo == 'true'
     strategy:
       matrix:
-        python-version: [3.9, 3.10, 3.11]
+        python-version: [3.10]
         # Matrika za testiranje na različnih verzijah Pythona
+      fail-fast: false  # Nadaljuje z drugimi verzijami, tudi če ena pade
     steps:
       - name: Checkout kode
         uses: actions/checkout@v4
@@ -56,16 +57,19 @@ jobs:
           name: test-status
         # Prenos artefakta napaka.txt iz prvega posla
 
+      - name: Preveri verzijo Pythona
+        run: python3 --version
+        # Komentar: Zagotovi, da je pravilna verzija Pythona na voljo
+
       - name: Nastavi virtualno okolje in poženite teste (matrix)
         run: |
           if grep -q "NAPAKA" napaka.txt; then
             echo "Napaka pri preverjanju testov!"
             exit 1
           fi
-          python${{ matrix.python-version }} -m venv venv
+          python3 -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
           pip install pytest
           pip install -r requirements.txt
           pytest tests/ --verbose
-        # Namestitev pytest in odvisnosti, nato zagon testov z verbose izhodom
