@@ -57,8 +57,10 @@ jobs:
           name: test-status
         # Prenos artefakta napaka.txt iz prvega posla
 
-      - name: Preveri verzijo Pythona
-        run: python3 --version
+      - name: Nastavi Python verzijo
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
         # Komentar: Zagotovi, da je pravilna verzija Pythona na voljo
 
       - name: Nastavi virtualno okolje in poženite teste (matrix)
