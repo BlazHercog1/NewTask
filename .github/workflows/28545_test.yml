@@ -43,7 +43,7 @@ jobs:
     if: needs.preveri-teste.outputs.testi_obstajajo == 'true'
     strategy:
       matrix:
-        python-version: [3.8, 3.10]
+        python-version: [3.9, 3.10, 3.11]
         # Matrika za testiranje na različnih verzijah Pythona
     steps:
       - name: Checkout kode
