@@ -1,39 +1,23 @@
-name: Razmestitev kode
+name: Deploy Docker Image
 
-# Proženje po uspešnem zaključku testnega delovnega toka
 on:
-  workflow_run:
-    workflows: ["Testiranje kode"] # Povezava z vašim testnim workflow-om
-    types:
-      - completed
-    branches:
-      - main
+  push:
+    branches: [main]
 
 jobs:
-  build-and-push:
-    # Zažene se le, če je testni workflow uspešen
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    runs-on: self-hosted # Uporaba self-hosted runnerja, kot v test.yml
+  deploy:
+    runs-on: self-hosted
+    needs: [run-tests]
     steps:
-      - name: Checkout kode
-        uses: actions/checkout@v4
-        # Prenos kode iz repozitorija za gradnjo Docker slike
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Priprava Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        # Namestitev Buildx za gradnjo Docker zabojnikov na self-hosted runnerju
+      - name: Log in to DockerHub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
 
-      - name: Prijava v DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${ secrets.DOCKERHUB_USERNAME }
-          password: ${ secrets.DOCKERHUB_TOKEN }
-        # Prijava v DockerHub z uporabo GitHub skrivnosti
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/myapp:latest .
 
-      - name: Gradnja in potiskanje Docker slike
-        uses: docker/build-push-action@v6
-        with:
-          context: . # Uporaba trenutnega direktorija za Dockerfile
-          push: true # Potiskanje slike na DockerHub
-          tags: ${ secrets.DOCKERHUB_USERNAME }/moja-aplikacija:latest
+      - name: Push Docker image
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/myapp:latest
 		  
